@@ -135,6 +135,7 @@ class CollectorConfig(config: Config) {
   private val stream = kinesis.getConfig("stream")
   val streamName = stream.getString("name")
   val streamSize = stream.getInt("size")
+  val streamEndpoint = stream.getString("endpoint")
 
   val threadpoolSize = kinesis.hasPath("thread-pool-size") match {
     case true => kinesis.getInt("thread-pool-size")
