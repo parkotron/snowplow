@@ -19,14 +19,16 @@
 package com.snowplowanalytics.snowplow.enrich.kinesis
 package sources
 
+import com.snowplowanalytics.iglu.client.Resolver
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+
 /**
  * Source to allow the testing framework to enrich events
  * using the same methods from AbstractSource as the other
  * sources.
  */
-class TestSource(config: KinesisEnrichConfig)
-    extends AbstractSource(config) {
-
+class TestSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry)
+  extends AbstractSource(config, igluResolver, enrichmentRegistry) {
   /**
    * Never-ending processing loop over source stream.
    * Not supported for TestSource.

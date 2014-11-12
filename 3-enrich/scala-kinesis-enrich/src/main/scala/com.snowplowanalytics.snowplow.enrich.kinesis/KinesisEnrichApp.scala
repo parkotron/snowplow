@@ -20,12 +20,17 @@ package com.snowplowanalytics.snowplow.enrich.kinesis
 
 // Java
 import java.io.File
+import com.snowplowanalytics.snowplow.enrich.common.utils.JsonUtils
+import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
 
 // Config
-import com.typesafe.config.{Config,ConfigFactory}
+import com.typesafe.config.{ConfigRenderOptions, Config, ConfigFactory}
 
 // Argot
 import org.clapper.argot.ArgotParser
+
+import com.snowplowanalytics.iglu.client.Resolver
+import org.json4s.jackson.JsonMethods._
 
 // Snowplow
 import sources._
@@ -70,14 +75,59 @@ object KinesisEnrichApp extends App {
       }
   }
 
+  val enrichmentsDirectory = parser.option[String](
+    List("enrichments"), "filename", """
+                                       |Directory of enrichment configuration JSONs.""".stripMargin) {
+    (c, opt) =>
+      val file = new File(c)
+      if (file.exists) {
+        c
+      } else {
+        parser.usage("Enrichments directory \"%s\" does not exist".format(c))
+      }
+  }
+
   parser.parse(args)
-  val kinesisEnrichConfig = new KinesisEnrichConfig(
-    config.value.getOrElse(ConfigFactory.load("default"))
+
+  val kinesisEnrichConfig = new KinesisEnrichConfig(parsedConfig)
+
+  val parsedConfig = config.value.getOrElse(throw new RuntimeException("--config argument must be provided"))
+
+  val resolverConfig = parsedConfig.resolve.getConfig("enrich").getConfig("resolver").root.render(ConfigRenderOptions.concise())
+
+  implicit val igluResolver: Resolver = (for {
+    json <- JsonUtils.extractJson("", resolverConfig)
+    resolver <- Resolver.parse(json).leftMap(_.toString)
+  } yield resolver) fold (
+    e => throw new RuntimeException(e),
+    s => s
   )
 
+  val registry: EnrichmentRegistry = (for {
+    registryConfig <- JsonUtils.extractJson("", enrichmentConfig)
+    reg <- EnrichmentRegistry.parse(fromJsonNode(registryConfig), false).leftMap(_.toString)
+  } yield reg) fold (
+    e => throw new RuntimeException(e),
+    s => s
+  )
+
+  def getEnrichmentConfig: String = {
+    val enrichmentJsonStrings: String = enrichmentsDirectory.value match {
+      case Some(dir) => {
+        val enrichmentJsonFiles = new java.io.File(dir).listFiles.filter(_.getName.endsWith(".json"))
+        enrichmentJsonFiles.map(scala.io.Source.fromFile(_).mkString).mkString(",")
+      }
+      case None => ""
+    }
+
+    """{"schema":"iglu:com.snowplowanalytics.snowplow/enrichments/jsonschema/1-0-0","data":[%s]}""".format(enrichmentJsonStrings)
+  }
+
+  val enrichmentConfig = getEnrichmentConfig
+
   val source = kinesisEnrichConfig.source match {
-    case Source.Kinesis => new KinesisSource(kinesisEnrichConfig)
-    case Source.Stdin => new StdinSource(kinesisEnrichConfig)
+    case Source.Kinesis => new KinesisSource(kinesisEnrichConfig, igluResolver, registry)
+    case Source.Stdin => new StdinSource(kinesisEnrichConfig, igluResolver, registry)
   }
   source.run
 }
@@ -119,7 +169,6 @@ class KinesisEnrichConfig(config: Config) {
   val appName = streams.getString("app-name")
 
   val initialPosition = streams.getString("initial-position")
-  val streamEndpoint = streams.getString("endpoint")
 
   private val enrichments = enrich.getConfig("enrichments")
   private val geoIp = enrichments.getConfig("geo_ip")
@@ -138,4 +187,7 @@ class KinesisEnrichConfig(config: Config) {
   private val anonIp = enrichments.getConfig("anon_ip")
   val anonIpEnabled = anonIp.getBoolean("enabled")
   val anonOctets = anonIp.getInt("anon_octets")
+
+  private val streamRegion = streams.getString("region")
+  val streamEndpoint = s"https://kinesis.${streamRegion}.amazonaws.com"
 }

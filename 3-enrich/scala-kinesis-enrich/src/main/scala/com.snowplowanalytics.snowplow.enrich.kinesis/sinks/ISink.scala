@@ -32,5 +32,5 @@ trait ISink {
    * String until such time as https://github.com/snowplow/snowplow/issues/211
    * is implemented.
    */
-  def storeCanonicalOutput(output: String, key: String)
+  def storeEnrichedEvent(output: String, key: String)
 }

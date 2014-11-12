@@ -20,6 +20,8 @@ package com.snowplowanalytics.snowplow.enrich
 package kinesis
 package sources
 
+import org.apache.commons.codec.binary.Base64
+
 // Amazon
 import com.amazonaws.auth._
 
@@ -30,23 +32,33 @@ import Scalaz._
 // Snowplow
 import sinks._
 import com.snowplowanalytics.maxmind.geoip.IpGeo
-import common.outputs.CanonicalOutput
-import common.inputs.ThriftLoader
-import common.MaybeCanonicalInput
-import common.outputs.CanonicalOutput
+import common.outputs.{EnrichedEvent, BadRow}
+import common.loaders.ThriftLoader
+import com.snowplowanalytics.snowplow.enrich.common.{EtlPipeline, ValidatedMaybeCollectorPayload}
 import common.enrichments.EnrichmentManager
-import common.enrichments.PrivacyEnrichments.AnonOctets
+import common.enrichments.registry.AnonOctets
+
+// Iglu
+import com.snowplowanalytics.iglu.client.Resolver
+import com.snowplowanalytics.iglu.client.validation.ProcessingMessageMethods._
+
+import common.loaders.ThriftLoader
+import common.enrichments.EnrichmentRegistry
+import common.enrichments.EnrichmentManager
+import common.adapters.AdapterRegistry
 
 /**
  * Abstract base for the different sources
  * we support.
  */
-abstract class AbstractSource(config: KinesisEnrichConfig) {
+abstract class AbstractSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry) {
   
   /**
    * Never-ending processing loop over source stream.
    */
   def run
+
+  implicit val resolver: Resolver = igluResolver
 
   /**
    * Fields in our CanonicalOutput which are discarded for legacy
@@ -59,14 +71,20 @@ abstract class AbstractSource(config: KinesisEnrichConfig) {
 
   // Initialize the sink to output enriched events to.
   protected val sink: Option[ISink] = config.sink match {
-    case Sink.Kinesis => new KinesisSink(kinesisProvider, config).some
-    case Sink.Stdouterr => new StdouterrSink().some
+    case Sink.Kinesis => new KinesisSink(kinesisProvider, config, InputType.Good).some
+    case Sink.Stdouterr => new StdouterrSink(InputType.Good).some
+    case Sink.Test => None
+  }
+
+  protected val badSink: Option[ISink] = config.sink match {
+    case Sink.Kinesis => new KinesisSink(kinesisProvider, config, InputType.Bad).some
+    case Sink.Stdouterr => new StdouterrSink(InputType.Bad).some
     case Sink.Test => None
   }
 
   // Iterate through an enriched CanonicalOutput object and tab separate
   // the fields to a string.
-  def tabSeparateCanonicalOutput(output: CanonicalOutput): String = {
+  def tabSeparateCanonicalOutput(output: EnrichedEvent): String = {
     output.getClass.getDeclaredFields
     .filter { field =>
       !DiscardedFields.contains(field.getName)
@@ -82,46 +100,29 @@ abstract class AbstractSource(config: KinesisEnrichConfig) {
   // our sink is Test, but it's an impure function (with
   // storeCanonicalOutput side effect) for the other sinks. We should
   // break this into a pure function with an impure wrapper.
-  def enrichEvent(binaryData: Array[Byte]): Option[String] = {
-    val canonicalInput = ThriftLoader.toCanonicalInput(binaryData)
-
-    canonicalInput.toValidationNel match { 
-
-      case Failure(f)        => None
-        // TODO: https://github.com/snowplow/snowplow/issues/463
-      case Success(None)     => None // Do nothing
-      case Success(Some(ci)) => {
-        val ipGeo = new IpGeo(
-          dbFile = config.maxmindFile,
-          memCache = false,
-          lruCache = 20000
-        )
-        val anonOctets =
-          if (!config.anonIpEnabled || config.anonOctets == 0) {
-            AnonOctets.None
-          } else {
-            AnonOctets(config.anonOctets)
+  def enrichEvent(binaryData: Array[Byte]): List[Option[String]] = {
+    val canonicalInput: ValidatedMaybeCollectorPayload = ThriftLoader.toCollectorPayload(binaryData)
+    val processedEvents: List[ValidationNel[String, EnrichedEvent]] = EtlPipeline.processEvents(
+      enrichmentRegistry, s"kinesis-${generated.Settings.version}", System.currentTimeMillis.toString, canonicalInput)
+    processedEvents.map(validatedMaybeEvent => {
+      validatedMaybeEvent match {
+        case Success(co) => {
+          val ts = tabSeparateCanonicalOutput(co)
+          for (s <- sink) {
+            // TODO: pull this side effect into parent function
+            s.storeEnrichedEvent(ts, co.user_ipaddress)
           }
-        val canonicalOutput = EnrichmentManager.enrichEvent(
-          ipGeo,
-          s"kinesis-${generated.Settings.version}",
-          anonOctets,
-          ci
-        )
-
-        canonicalOutput.toValidationNel match {
-          case Success(co) =>
-            val ts = tabSeparateCanonicalOutput(co)
-            for (s <- sink) {
-              // TODO: pull this side effect into parent function
-              s.storeCanonicalOutput(ts, co.user_ipaddress)
-            }
-            Some(ts)
-          case Failure(f)  => None
-            // TODO: https://github.com/snowplow/snowplow/issues/463
+          Some(ts)
+        }
+        case Failure(errors) => {
+          for (s <- badSink) {
+            val line = new String(Base64.encodeBase64(binaryData))
+            s.storeEnrichedEvent(BadRow(line, errors).toCompactJson, "fail")
+          }
+          None
         }
       }
-    }
+    })
   }
 
   // Initialize a Kinesis provider with the given credentials.

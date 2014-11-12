@@ -54,13 +54,19 @@ import collectors.thrift.{
   PayloadFormat
 }
 
+// Iglu
+import com.snowplowanalytics.iglu.client.Resolver
+
+// Snowplow
+import common.enrichments.EnrichmentRegistry
+
 /**
  * Source to read events from a Kinesis stream
  *
  * TODO: replace printlns with using Java logger
  */
-class KinesisSource(config: KinesisEnrichConfig)
-    extends AbstractSource(config) {
+class KinesisSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry)
+  extends AbstractSource(config, igluResolver, enrichmentRegistry) {
   
   /**
    * Never-ending processing loop over source stream.

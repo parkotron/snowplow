@@ -140,7 +140,7 @@ class PagePingWithContextSpec extends Specification {
 
       val rawEvent = Base64.decodeBase64(PagePingWithContextSpec.raw)
       
-      val enrichedEvent = TestSource.enrichEvent(rawEvent)
+      val enrichedEvent = TestSource.enrichEvent(rawEvent)(0)
       enrichedEvent must beSome
 
       val fields = enrichedEvent.get.split("\t")

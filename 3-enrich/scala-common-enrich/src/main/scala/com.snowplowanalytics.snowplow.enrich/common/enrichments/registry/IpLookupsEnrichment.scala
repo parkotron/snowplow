@@ -152,6 +152,7 @@ case class IpLookupsEnrichment(
 
     def db(dbPath: Option[(String, URI, String)]): DbEntry = dbPath.map { case (name, uri, file) =>
       if (localMode) {
+        println(s"-------------------------------------------------> $file")
         (None, getClass.getResource(file).toURI.getPath)
       } else {
         (Some(uri), "./ip_" + name)

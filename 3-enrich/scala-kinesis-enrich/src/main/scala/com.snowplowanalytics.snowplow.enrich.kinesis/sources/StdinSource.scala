@@ -23,16 +23,23 @@ package sources
 // Scala
 import scala.io
 import scala.collection.JavaConversions._
+import com.snowplowanalytics.snowplow.enrich.common
 
 // Apache commons
 import org.apache.commons.codec.binary.Base64
+
+// Iglu
+import com.snowplowanalytics.iglu.client.Resolver
+
+// Snowplow
+import common.enrichments.EnrichmentRegistry
 
 /**
  * Source to decode raw events (in base64)
  * from stdin.
  */
-class StdinSource(config: KinesisEnrichConfig)
-    extends AbstractSource(config) {
+class StdinSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry)
+  extends AbstractSource(config, igluResolver, enrichmentRegistry) {
 
   /**
    * Never-ending processing loop over source stream.

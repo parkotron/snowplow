@@ -39,7 +39,7 @@ class InvalidEnrichedEventSpec extends Specification {
 
       val rawEvent = Base64.decodeBase64(InvalidEnrichedEventSpec.raw)
       
-      val enrichedEvent = TestSource.enrichEvent(rawEvent)
+      val enrichedEvent = TestSource.enrichEvent(rawEvent)(0)
       enrichedEvent must beNone
     }
   }

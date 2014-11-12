@@ -140,7 +140,7 @@ class StructEventWithContextSpec extends Specification {
 
       val rawEvent = Base64.decodeBase64(StructEventWithContextSpec.raw)
       
-      val enrichedEvent = TestSource.enrichEvent(rawEvent)
+      val enrichedEvent = TestSource.enrichEvent(rawEvent)(0)
       enrichedEvent must beSome
 
       val fields = enrichedEvent.get.split("\t")
