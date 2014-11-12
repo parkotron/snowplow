@@ -34,8 +34,8 @@ object PageViewWithContextSpec {
     "CFe23a",
     "web",
     TimestampRegex,
-    "2014-02-02 20:19:39.427",
-    "2014-02-02 20:19:39.318",
+    "1391372379427",
+    "1391372379318",
     "page_view",
     Uuid4Regexp, // Regexp match
     "125546",

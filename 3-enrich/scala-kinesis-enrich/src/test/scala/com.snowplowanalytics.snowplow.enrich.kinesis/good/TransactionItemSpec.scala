@@ -34,8 +34,8 @@ object TransactionItemSpec {
     "CFe23a",
     "web",
     TimestampRegex,
-    "2014-02-02 22:05:16.153",
-    "2014-02-02 22:05:16.275",
+    "1391378716153",
+    "1391378716275",
     "transaction_item",
     Uuid4Regexp, // Regexp match
     "400017",

@@ -34,8 +34,8 @@ object StructEventSpec {
     "CFe23a",
     "web",
     TimestampRegex,
-    "2014-02-02 22:01:20.941",
-    "2014-02-02 22:01:21.071",
+    "1391378480941",
+    "1391378481071",
     "struct",
     Uuid4Regexp, // Regexp match
     "344214",
