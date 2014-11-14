@@ -17,19 +17,20 @@
  * governing permissions and limitations there under.
  */
 
-package com.snowplowanalytics.snowplow.enrich.kinesis
+package com.snowplowanalytics
+package snowplow.enrich
+package kinesis
 package sources
 
 // Scala
 import scala.io
 import scala.collection.JavaConversions._
-import com.snowplowanalytics.snowplow.enrich.common
 
 // Apache commons
 import org.apache.commons.codec.binary.Base64
 
 // Iglu
-import com.snowplowanalytics.iglu.client.Resolver
+import iglu.client.Resolver
 
 // Snowplow
 import common.enrichments.EnrichmentRegistry
@@ -39,7 +40,7 @@ import common.enrichments.EnrichmentRegistry
  * from stdin.
  */
 class StdinSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry)
-  extends AbstractSource(config, igluResolver, enrichmentRegistry) {
+    extends AbstractSource(config, igluResolver, enrichmentRegistry) {
 
   /**
    * Never-ending processing loop over source stream.
@@ -47,7 +48,7 @@ class StdinSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmen
   def run = {
     for (ln <- io.Source.stdin.getLines) {
       val bytes = Base64.decodeBase64(ln)
-      enrichEvent(bytes)
+      enrichEvents(bytes)
     }
   }
 }

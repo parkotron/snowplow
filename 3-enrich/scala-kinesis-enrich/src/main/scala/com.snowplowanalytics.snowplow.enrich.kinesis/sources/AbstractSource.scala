@@ -16,55 +16,57 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-package com.snowplowanalytics.snowplow.enrich
+package com.snowplowanalytics
+package snowplow.enrich
 package kinesis
 package sources
 
-import org.apache.commons.codec.binary.Base64
-
 // Amazon
 import com.amazonaws.auth._
+
+// Apache commons
+import org.apache.commons.codec.binary.Base64
 
 // Scalaz
 import scalaz.{Sink => _, _}
 import Scalaz._
 
-// Snowplow
-import sinks._
-import com.snowplowanalytics.maxmind.geoip.IpGeo
-import common.outputs.{EnrichedEvent, BadRow}
-import common.loaders.ThriftLoader
-import com.snowplowanalytics.snowplow.enrich.common.{EtlPipeline, ValidatedMaybeCollectorPayload}
-import common.enrichments.EnrichmentManager
-import common.enrichments.registry.AnonOctets
+// json4s
+import org.json4s.scalaz.JsonScalaz._
+import org.json4s._
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 
 // Iglu
-import com.snowplowanalytics.iglu.client.Resolver
-import com.snowplowanalytics.iglu.client.validation.ProcessingMessageMethods._
+import iglu.client.Resolver
+import iglu.client.validation.ProcessingMessageMethods._
 
+// Snowplow
+import sinks._
+import common.outputs.{
+  EnrichedEvent,
+  BadRow
+}
 import common.loaders.ThriftLoader
 import common.enrichments.EnrichmentRegistry
 import common.enrichments.EnrichmentManager
 import common.adapters.AdapterRegistry
 
+import common.ValidatedMaybeCollectorPayload
+import common.EtlPipeline
+import common.utils.JsonUtils
+
 /**
  * Abstract base for the different sources
  * we support.
  */
-abstract class AbstractSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry) {
+abstract class AbstractSource(config: KinesisEnrichConfig, igluResolver: Resolver,
+                              enrichmentRegistry: EnrichmentRegistry) {
   
   /**
    * Never-ending processing loop over source stream.
    */
   def run
-
-  implicit val resolver: Resolver = igluResolver
-
-  /**
-   * Fields in our CanonicalOutput which are discarded for legacy
-   * Redshift space reasons
-   */
-  private val DiscardedFields = Array("page_url", "page_referrer")
 
   // Initialize a kinesis provider to use with a Kinesis source or sink.
   protected val kinesisProvider = createKinesisProvider
@@ -82,13 +84,12 @@ abstract class AbstractSource(config: KinesisEnrichConfig, igluResolver: Resolve
     case Sink.Test => None
   }
 
-  // Iterate through an enriched CanonicalOutput object and tab separate
+  implicit val resolver: Resolver = igluResolver
+
+  // Iterate through an enriched EnrichedEvent object and tab separate
   // the fields to a string.
-  def tabSeparateCanonicalOutput(output: EnrichedEvent): String = {
+  def tabSeparateEnrichedEvent(output: EnrichedEvent): String = {
     output.getClass.getDeclaredFields
-    .filter { field =>
-      !DiscardedFields.contains(field.getName)
-    }
     .map{ field =>
       field.setAccessible(true)
       Option(field.get(output)).getOrElse("")
@@ -98,16 +99,16 @@ abstract class AbstractSource(config: KinesisEnrichConfig, igluResolver: Resolve
   // Helper method to enrich an event.
   // TODO: this is a slightly odd design: it's a pure function if our
   // our sink is Test, but it's an impure function (with
-  // storeCanonicalOutput side effect) for the other sinks. We should
+  // storeEnrichedEvent side effect) for the other sinks. We should
   // break this into a pure function with an impure wrapper.
-  def enrichEvent(binaryData: Array[Byte]): List[Option[String]] = {
+  def enrichEvents(binaryData: Array[Byte]): List[Option[String]] = {
     val canonicalInput: ValidatedMaybeCollectorPayload = ThriftLoader.toCollectorPayload(binaryData)
     val processedEvents: List[ValidationNel[String, EnrichedEvent]] = EtlPipeline.processEvents(
       enrichmentRegistry, s"kinesis-${generated.Settings.version}", System.currentTimeMillis.toString, canonicalInput)
     processedEvents.map(validatedMaybeEvent => {
       validatedMaybeEvent match {
         case Success(co) => {
-          val ts = tabSeparateCanonicalOutput(co)
+          val ts = tabSeparateEnrichedEvent(co)
           for (s <- sink) {
             // TODO: pull this side effect into parent function
             s.storeEnrichedEvent(ts, co.user_ipaddress)
@@ -135,13 +136,47 @@ abstract class AbstractSource(config: KinesisEnrichConfig, igluResolver: Resolve
       throw new RuntimeException(
         "access-key and secret-key must both be set to 'cpf', or neither"
       )
+    } else if (isIam(a) && isIam(s)) {
+      new InstanceProfileCredentialsProvider()
+    } else if (isIam(a) || isIam(s)) {
+      throw new RuntimeException("access-key and secret-key must both be set to 'iam', or neither")
+    } else if (isEnv(a) && isEnv(s)) {
+      new EnvironmentVariableCredentialsProvider()
+    } else if (isEnv(a) || isEnv(s)) {
+      throw new RuntimeException("access-key and secret-key must both be set to 'env', or neither")
     } else {
       new BasicAWSCredentialsProvider(
         new BasicAWSCredentials(a, s)
       )
     }
   }
+
+  /**
+   * Is the access/secret key set to the special value "cpf" i.e. use
+   * the classpath properties file for credentials.
+   *
+   * @param key The key to check
+   * @return true if key is cpf, false otherwise
+   */
   private def isCpf(key: String): Boolean = (key == "cpf")
+
+  /**
+   * Is the access/secret key set to the special value "iam" i.e. use
+   * the IAM role to get credentials.
+   *
+   * @param key The key to check
+   * @return true if key is iam, false otherwise
+   */
+  private def isIam(key: String): Boolean = (key == "iam")
+
+  /**
+   * Is the access/secret key set to the special value "env" i.e. get
+   * the credentials from environment variables
+   *
+   * @param key The key to check
+   * @return true if key is iam, false otherwise
+   */
+  private def isEnv(key: String): Boolean = (key == "env")
 
   // Wrap BasicAWSCredential objects.
   class BasicAWSCredentialsProvider(basic: BasicAWSCredentials) extends

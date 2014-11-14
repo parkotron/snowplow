@@ -1,4 +1,4 @@
-/*
+/* 
  * Copyright (c) 2013-2014 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0, and
@@ -50,7 +50,7 @@ object SpecHelpers {
   /**
    * The Kinesis Enrich being used
    */
-  val EnrichVersion = "kinesis-0.2.0-common-0.7.0"
+  val EnrichVersion = "kinesis-0.1.1-common-0.7.1-SNAPSHOT"
 
   val TimestampRegex = "[0-9]+"
 
@@ -74,8 +74,8 @@ object SpecHelpers {
    * The names of the fields written out
    */
   lazy val OutputFields = classOf[EnrichedEvent]
-    .getDeclaredFields
-    .map(_.getName)
+      .getDeclaredFields
+      .map(_.getName)
 
   /**
    * User-friendly wrapper to instantiate
@@ -154,64 +154,64 @@ object SpecHelpers {
   lazy val TestSource = {
 
     val enrichmentConfig = """|{
-                             |"schema": "iglu:com.snowplowanalytics.snowplow/enrichments/jsonschema/1-0-0",
-                             |"data": [
-                             |{
-                             |"schema": "iglu:com.snowplowanalytics.snowplow/anon_ip/jsonschema/1-0-0",
-                             |"data": {
-                             |"vendor": "com.snowplowanalytics.snowplow",
-                             |"name": "anon_ip",
-                             |"enabled": true,
-                             |"parameters": {
-                             |"anonOctets": 1
-                             |}
-                             |}
-                             |},
-                             |{
-                             |"schema": "iglu:com.snowplowanalytics.snowplow/ip_lookups/jsonschema/1-0-0",
-                             |"data": {
-                             |"vendor": "com.snowplowanalytics.snowplow",
-                             |"name": "ip_lookups",
-                             |"enabled": true,
-                             |"parameters": {
-                             |"geo": {
-                             |"database": "GeoIPCity.dat",
-                             |"uri":  "http://snowplow-hosted-assets.s3.amazonaws.com/third-party/maxmind"
-                             |}
-                             |}
-                             |}
-                             |},
-                             |{
-                             |"schema": "iglu:com.snowplowanalytics.snowplow/campaign_attribution/jsonschema/1-0-0",
-                             |"data": {
-                             |"vendor": "com.snowplowanalytics.snowplow",
-                             |"name": "campaign_attribution",
-                             |"enabled": true,
-                             |"parameters": {
-                             |"mapping": "static",
-                             |"fields": {
-                             |"mktMedium": ["utm_medium", "medium"],
-                             |"mktSource": ["utm_source", "source"],
-                             |"mktTerm": ["utm_term", "legacy_term"],
-                             |"mktContent": ["utm_content"],
-                             |"mktCampaign": ["utm_campaign", "cid", "legacy_campaign"]
-                             |}
-                             |}
-                             |}
-                             |},
-                             |{
-                             |"schema": "iglu:com.snowplowanalytics.snowplow/referer_parser/jsonschema/1-0-0",
-                             |"data": {
-                             |"vendor": "com.snowplowanalytics.snowplow",
-                             |"name": "referer_parser",
-                             |"enabled": true,
-                             |"parameters": {
-                             |"internalDomains": ["www.subdomain1.snowplowanalytics.com"]
-                             |}
-                             |}
-                             |}
-                             |]
-                             |}""".stripMargin.replaceAll("[\n\r]","").stripMargin.replaceAll("[\n\r]","")
+      |"schema": "iglu:com.snowplowanalytics.snowplow/enrichments/jsonschema/1-0-0",
+      |"data": [
+        |{
+          |"schema": "iglu:com.snowplowanalytics.snowplow/anon_ip/jsonschema/1-0-0",
+          |"data": {
+            |"vendor": "com.snowplowanalytics.snowplow",
+            |"name": "anon_ip",
+            |"enabled": true,
+            |"parameters": {
+              |"anonOctets": 1
+            |}
+          |}
+        |},
+        |{
+          |"schema": "iglu:com.snowplowanalytics.snowplow/ip_lookups/jsonschema/1-0-0",
+          |"data": {
+            |"vendor": "com.snowplowanalytics.snowplow",
+            |"name": "ip_lookups",
+            |"enabled": true,
+            |"parameters": {
+              |"geo": {
+                |"database": "GeoIPCity.dat",
+                |"uri":  "http://snowplow-hosted-assets.s3.amazonaws.com/third-party/maxmind"
+              |}
+            |}
+          |}  
+        |},
+        |{
+          |"schema": "iglu:com.snowplowanalytics.snowplow/campaign_attribution/jsonschema/1-0-0",
+          |"data": {
+            |"vendor": "com.snowplowanalytics.snowplow",
+            |"name": "campaign_attribution",
+            |"enabled": true,
+            |"parameters": {
+              |"mapping": "static",
+              |"fields": {
+                |"mktMedium": ["utm_medium", "medium"],
+                |"mktSource": ["utm_source", "source"],
+                |"mktTerm": ["utm_term", "legacy_term"],
+                |"mktContent": ["utm_content"],
+                |"mktCampaign": ["utm_campaign", "cid", "legacy_campaign"]
+              |}
+            |}
+          |}
+        |},
+        |{
+          |"schema": "iglu:com.snowplowanalytics.snowplow/referer_parser/jsonschema/1-0-0",
+          |"data": {
+            |"vendor": "com.snowplowanalytics.snowplow",
+            |"name": "referer_parser",
+            |"enabled": true,
+            |"parameters": {
+              |"internalDomains": ["www.subdomain1.snowplowanalytics.com"]
+            |}
+          |}  
+        |}              
+      |]
+    |}""".stripMargin.replaceAll("[\n\r]","").stripMargin.replaceAll("[\n\r]","")
 
     val config = """
 enrich {
@@ -235,12 +235,12 @@ enrich {
     }
     app-name: SnowplowKinesisEnrich-${enrich.streams.in.raw}
     initial-position = "TRIM_HORIZON"
-    region: "eu-west-1"
+    region: "us-east-1"
   }
   enrichments {
     geo_ip: {
       enabled: true # false not yet suported
-      maxmind_file: "/tmp/GeoLiteCity.dat" # SBT auto-downloads into resource_managed/test
+      maxmind_file: "/maxmind/GeoLiteCity.dat" # SBT auto-downloads into resource_managed/test
     }
     anon_ip: {
       enabled: true
@@ -248,7 +248,7 @@ enrich {
     }
   }
 }
-                 """
+"""
 
     val validatedResolver = for {
       json <- JsonUtils.extractJson("", """{
@@ -270,7 +270,7 @@ enrich {
           ]
         }
       }
-                                        """)
+      """)
       resolver <- Resolver.parse(json).leftMap(_.toString)
     } yield resolver
 
@@ -285,7 +285,7 @@ enrich {
     } yield reg) fold (
       e => throw new RuntimeException(e),
       s => s
-      )
+    )
 
     val conf = ConfigFactory.parseString(config)
     val kec = new KinesisEnrichConfig(conf)

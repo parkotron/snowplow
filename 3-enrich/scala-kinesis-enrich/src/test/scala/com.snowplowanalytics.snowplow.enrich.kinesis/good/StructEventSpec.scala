@@ -1,4 +1,4 @@
-/*
+/* 
  * Copyright (c) 2013-2014 Snowplow Analytics Ltd. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0, and
@@ -34,8 +34,8 @@ object StructEventSpec {
     "CFe23a",
     "web",
     TimestampRegex,
-    "2014-02-02 22:01:20.941",
-    "2014-02-02 22:01:21.071",
+    "1391378480941",
+    "1391378481071",
     "struct",
     Uuid4Regexp, // Regexp match
     "344214",
@@ -139,7 +139,7 @@ object StructEventSpec {
     "UTF-8",
     "1680",
     "415"
-  )
+    )
 }
 
 class StructEventSpec extends Specification {
@@ -150,7 +150,7 @@ class StructEventSpec extends Specification {
 
       val rawEvent = Base64.decodeBase64(StructEventSpec.raw)
 
-      val enrichedEvent = TestSource.enrichEvent(rawEvent)(0)
+      val enrichedEvent = TestSource.enrichEvents(rawEvent)(0)
       enrichedEvent must beSome
 
       val fields = enrichedEvent.get.split("\t")

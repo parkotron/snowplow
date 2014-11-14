@@ -34,9 +34,9 @@ import com.amazonaws.regions._
 import io.github.cloudify.scala.aws.kinesis.Client
 import io.github.cloudify.scala.aws.kinesis.Client.ImplicitExecution._
 import io.github.cloudify.scala.aws.kinesis.Definitions.{
-Stream,
-PutResult,
-Record
+  Stream,
+  PutResult,
+  Record
 }
 import io.github.cloudify.scala.aws.kinesis.KinesisDsl._
 
@@ -60,14 +60,14 @@ import common.outputs.EnrichedEvent
  * Kinesis Sink for Scala enrichment
  */
 class KinesisSink(provider: AWSCredentialsProvider,
-                  config: KinesisEnrichConfig, inputType: InputType.InputType) extends ISink {
+    config: KinesisEnrichConfig, inputType: InputType.InputType) extends ISink {
   private lazy val log = LoggerFactory.getLogger(getClass())
   import log.{error, debug, info, trace}
-
+  
   // explicitly create a client so we can configure the end point
   val client = new AmazonKinesisClient(provider)
   client.setEndpoint(config.streamEndpoint)
-
+  
   // Create a Kinesis client for stream interactions.
   private implicit val kinesis = Client.fromClient(client)
 
@@ -79,7 +79,7 @@ class KinesisSink(provider: AWSCredentialsProvider,
    */
   def streamExists(name: String, timeout: Int = 60): Boolean = {
     val streamDescribeFuture = for {
-      s <- Kinesis.stream(name).describe
+       s <- Kinesis.stream(name).describe
     } yield s
 
     val description = Await.result(streamDescribeFuture, Duration(timeout, SECONDS))

@@ -32,7 +32,8 @@ object Dependencies {
     val jacksonCore          = "2.3.0"
     val slf4j                = "1.7.5"
     val awsSdk               = "1.6.11"
-    val kinesisClient        = "1.0.0"
+    val kinesisClient        = "1.2.0"
+    val kinesisConnector     = "1.1.1"
     // Scala
     val argot                = "1.0.1"
     val config               = "1.0.2"
@@ -64,7 +65,8 @@ object Dependencies {
     val slf4j                = "org.slf4j"                  %  "slf4j-simple"             % V.slf4j
     val awsSdk               = "com.amazonaws"              %  "aws-java-sdk"             % V.awsSdk
     val kinesisClient        = "com.amazonaws"              %  "amazon-kinesis-client"    % V.kinesisClient
-    val maxmindGeoip         = "com.snowplowanalytics"      %% "scala-maxmind-geoip"      % V.maxmindGeoip
+    val kinesisConnector     = "com.amazonaws"              %  "amazon-kinesis-connector" % V.kinesisConnector
+    val maxmindGeoip         = "com.snowplowanalytics"      %% "scala-maxmind-geoip"      % V.maxmindGeoip % "provided"
     // Scala
     val argot                = "org.clapper"                %% "argot"                    % V.argot
     val config               = "com.typesafe"               %  "config"                   % V.config

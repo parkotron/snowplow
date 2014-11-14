@@ -16,11 +16,16 @@
  * See the Apache License Version 2.0 for the specific language
  * governing permissions and limitations there under.
  */
-package com.snowplowanalytics.snowplow.enrich.kinesis
+package com.snowplowanalytics
+package snowplow.enrich
+package kinesis
 package sources
 
-import com.snowplowanalytics.iglu.client.Resolver
-import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegistry
+// Iglu
+import iglu.client.Resolver
+
+// Snowplow
+import common.enrichments.EnrichmentRegistry
 
 /**
  * Source to allow the testing framework to enrich events
@@ -28,7 +33,8 @@ import com.snowplowanalytics.snowplow.enrich.common.enrichments.EnrichmentRegist
  * sources.
  */
 class TestSource(config: KinesisEnrichConfig, igluResolver: Resolver, enrichmentRegistry: EnrichmentRegistry)
-  extends AbstractSource(config, igluResolver, enrichmentRegistry) {
+    extends AbstractSource(config, igluResolver, enrichmentRegistry) {
+
   /**
    * Never-ending processing loop over source stream.
    * Not supported for TestSource.
